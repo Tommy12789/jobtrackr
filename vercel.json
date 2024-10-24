@@ -1,0 +1,8 @@
+{
+  "build": {
+    "env": {
+      "ENABLE_PRISMA_CACHE": "false"
+    }
+  },
+  "buildCommand": "pnpm install && prisma generate && pnpm run build"
+}
