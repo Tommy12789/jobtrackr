@@ -4,8 +4,8 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Button } from './ui/button';
 import { cn } from '@/lib/utils';
-import { Input } from './ui/input';
 import { useToast } from '@/hooks/use-toast';
+import { Textarea } from './ui/textarea';
 
 interface JobOffer {
   url: string;
@@ -138,10 +138,10 @@ const JobOfferPage = () => {
               ) : selectedTab === 'coverLetter' ? (
                 <div className='flex items-center justify-center h-[calc(100vh-38rem)]'>
                   {jobOffer.coverLetter !== '' ? (
-                    <Input
+                    <Textarea
                       value={jobOffer.coverLetter}
-                      className='flex-1 h-full text-start'
-                    ></Input>
+                      className='flex-1 h-full '
+                    ></Textarea>
                   ) : (
                     <Button variant={'outline'}>Generate cover letter</Button>
                   )}

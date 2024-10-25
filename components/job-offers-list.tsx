@@ -7,8 +7,8 @@ import JobOfferModal from './job-offer-modal';
 import { JobOffer } from '@prisma/client';
 import { X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { Input } from './ui/input';
 import Link from 'next/link';
+import { Textarea } from './ui/textarea';
 
 interface JoinedJobOfferUser {
   userId: string;
@@ -107,6 +107,30 @@ const JobOffersList = () => {
       });
     } catch (error) {
       console.error('Failed to update job offer:', error);
+    }
+  };
+
+  const handleGenerateCoverLetter = async (url: string) => {
+    if (!userId) return;
+    if (!url) return;
+    try {
+      const response = await fetch(`/api/jobOffers/generateCoverLetter?url=${url}&userId=${userId}`, {
+        method: 'POST',
+      });
+
+      if (!response.ok) {
+        throw new Error('Error generating cover letter');
+      }
+
+      const data = await response.json();
+      const coverLetter = data.coverLetter;
+      setJobOffers((prev) => prev.map((offer) => (offer.url === url ? { ...offer, coverLetter: coverLetter } : offer)));
+      toast({
+        title: 'Cover letter generated successfully',
+        duration: 5000,
+      });
+    } catch (error) {
+      console.error('Failed to generate cover letter:', error);
     }
   };
 
@@ -290,16 +314,23 @@ const JobOffersList = () => {
                   </Button>
                 </div>
                 {selectedTab === 'description' ? (
-                  <p className='h-[calc(100vh-38rem)] overflow-y-auto rounded-lg py-4'> {offer.description}</p>
+                  <div className='h-[calc(100vh-38rem)] overflow-y-auto rounded-lg py-4'>
+                    <div dangerouslySetInnerHTML={{ __html: offer.description }} />
+                  </div>
                 ) : selectedTab === 'coverLetter' ? (
                   <div className='flex items-center justify-center h-[calc(100vh-38rem)]'>
                     {offer.coverLetter !== '' ? (
-                      <Input
+                      <Textarea
                         value={offer.coverLetter}
                         className='flex-1 h-full text-start'
-                      ></Input>
+                      ></Textarea>
                     ) : (
-                      <Button variant={'outline'}>Generate cover letter</Button>
+                      <Button
+                        onClick={() => handleGenerateCoverLetter(offer.url)}
+                        variant={'outline'}
+                      >
+                        Generate cover letter
+                      </Button>
                     )}
                   </div>
                 ) : null}

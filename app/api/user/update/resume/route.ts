@@ -3,7 +3,6 @@ import { NextResponse } from 'next/server';
 import pdfParse from 'pdf-parse';
 
 export async function PUT(request: Request) {
-  console.log('Request:', request);
   try {
     const formData = await request.formData();
     const file = formData.get('resume') as File;

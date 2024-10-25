@@ -15,7 +15,7 @@ import {
 
 import { useSession, signIn, signOut } from 'next-auth/react';
 
-import { Home, BriefcaseBusiness, UserPen, Settings, CircleUserRound } from 'lucide-react';
+import { Home, BriefcaseBusiness, UserPen, CircleUserRound } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
@@ -76,17 +76,6 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>
-        <SidebarMenuButton
-          size={'lg'}
-          asChild
-          {...(pathname === '/settings' ? { isActive: true } : {})}
-          tooltip={'Settings'}
-        >
-          <Link href='/settings'>
-            <Settings />
-            <span>Settings</span>
-          </Link>
-        </SidebarMenuButton>
         <SidebarSeparator />
 
         <SidebarMenuButton

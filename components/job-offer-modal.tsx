@@ -24,8 +24,9 @@ const JobOfferModal: React.FC<JobOfferModalProps> = ({ isOpen, closeModal, setJo
     companyName: '',
     position: '',
     location: '',
-    date: '',
     description: '',
+    employment_type: '',
+    link_manual: '',
   });
   const { data: session } = useSession();
   const userId = session?.user.id;
@@ -64,60 +65,118 @@ const JobOfferModal: React.FC<JobOfferModalProps> = ({ isOpen, closeModal, setJo
             companyName: formData.companyName,
             position: formData.position,
             location: formData.location,
-            date: formData.date,
             description: formData.description,
+            employment_type: formData.employment_type,
+            link_manual: formData.link_manual,
           };
 
-    try {
-      const response = await fetch(`/api/jobOffers/add?url=${formData.link}&userId=${userId}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(dataToSubmit),
-      });
+    if (selectedOption === 'link') {
+      try {
+        const response = await fetch(`/api/jobOffers/add?url=${formData.link}&userId=${userId}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(dataToSubmit),
+        });
 
-      if (response.ok) {
-        console.log(response);
-        const newJobOffer = await response.json();
-        newJobOffer.coverLetter = '';
-        newJobOffer.status = '';
-        setJobOffers((prevJobOffers) => [...prevJobOffers, newJobOffer]);
-        setFormData({
-          link: '',
-          companyName: '',
-          position: '',
-          location: '',
-          date: '',
-          description: '',
-        });
-        toast({
-          title: 'Job offer added successfully',
-          duration: 5000,
-        });
-        closeModal();
-        setIsLoading(false);
-      } else {
-        console.log(response);
-        if (response.statusText === 'User already linked to this job offer') {
-          console.error('Error adding job offer');
-          toast({
-            title: 'Job offer already added',
-            duration: 5000,
-            variant: 'destructive',
+        if (response.ok) {
+          console.log(response);
+          const newJobOffer = await response.json();
+          newJobOffer.coverLetter = '';
+          newJobOffer.status = '';
+          setJobOffers((prevJobOffers) => [...prevJobOffers, newJobOffer]);
+          setFormData({
+            link: '',
+            companyName: '',
+            position: '',
+            location: '',
+            description: '',
+            employment_type: '',
+            link_manual: '',
           });
-          setIsLoading(false);
+          toast({
+            title: 'Job offer added successfully',
+            duration: 5000,
+          });
           closeModal();
+          setIsLoading(false);
+        } else {
+          console.log(response);
+          if (response.statusText === 'User already linked to this job offer') {
+            console.error('Error adding job offer');
+            toast({
+              title: 'Job offer already added',
+              duration: 5000,
+              variant: 'destructive',
+            });
+            setIsLoading(false);
+            closeModal();
+          }
         }
+      } catch (error) {
+        console.error('Network error:', error);
+        toast({
+          title: 'Network error, please try again',
+          duration: 5000,
+          variant: 'destructive',
+        });
+        setIsLoading(false);
       }
-    } catch (error) {
-      console.error('Network error:', error);
-      toast({
-        title: 'Network error, please try again',
-        duration: 5000,
-        variant: 'destructive',
-      });
-      setIsLoading(false);
+    } else {
+      try {
+        const response = await fetch(`/api/jobOffers/add/manual?userId=${userId}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(dataToSubmit),
+        });
+
+        if (response.ok) {
+          console.log(response);
+          const dataJson = await response.json();
+          const newJobOffer = dataJson.jobOffer;
+          newJobOffer.coverLetter = '';
+          newJobOffer.status = '';
+          setJobOffers((prevJobOffers) => [...prevJobOffers, newJobOffer]);
+          setFormData({
+            link: '',
+            companyName: '',
+            position: '',
+            location: '',
+            description: '',
+            employment_type: '',
+            link_manual: '',
+          });
+          toast({
+            title: 'Job offer added successfully',
+            duration: 5000,
+          });
+          closeModal();
+          setIsLoading(false);
+        } else {
+          console.log(response);
+          if (response.statusText === 'User already linked to this job offer') {
+            console.error('Error adding job offer');
+            toast({
+              title: 'Job offer already added',
+              duration: 5000,
+              variant: 'destructive',
+            });
+            setIsLoading(false);
+            closeModal();
+          }
+        }
+      } catch (error) {
+        console.error('Network error:', error);
+        toast({
+          title: 'Network error, please try again',
+          duration: 5000,
+          variant: 'destructive',
+        });
+        setIsLoading(false);
+      }
     }
   };
 
@@ -175,11 +234,11 @@ const JobOfferModal: React.FC<JobOfferModalProps> = ({ isOpen, closeModal, setJo
                 placeholder='Offer Link'
               />
               <Button
-                className='mr-0'
                 variant={'outline'}
                 type='submit'
+                key={isLoading ? 'loading' : 'idle'}
               >
-                Add job offer
+                {isLoading ? 'Adding job offer...' : 'Add job offer'}
               </Button>
             </>
           ) : (
@@ -203,16 +262,22 @@ const JobOfferModal: React.FC<JobOfferModalProps> = ({ isOpen, closeModal, setJo
                 placeholder='Location'
               />
               <Input
-                name='date'
-                value={formData.date}
-                onChange={handleInputChange}
-                placeholder='Date'
-              />
-              <Input
                 name='description'
                 value={formData.description}
                 onChange={handleInputChange}
                 placeholder='Description'
+              />
+              <Input
+                name='employment_type'
+                value={formData.employment_type}
+                onChange={handleInputChange}
+                placeholder='Employment Type (hybrid, etc.)'
+              />
+              <Input
+                name='link_manual'
+                value={formData.link_manual}
+                onChange={handleInputChange}
+                placeholder='Link'
               />
               <Button
                 variant={'outline'}
