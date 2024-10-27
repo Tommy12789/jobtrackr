@@ -2,13 +2,13 @@
 import React, { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { cn } from '@/lib/utils';
-import { Button } from './ui/button';
+import { Button } from '../ui/button';
 import JobOfferModal from './job-offer-modal';
 import { JobOffer } from '@prisma/client';
-import { X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import Link from 'next/link';
-import { Textarea } from './ui/textarea';
+import { Textarea } from '../ui/textarea';
+import JobOffersList from './JobOffersList';
+import { SquareArrowOutUpRight } from 'lucide-react';
 
 interface JoinedJobOfferUser {
   userId: string;
@@ -31,7 +31,7 @@ export interface JobOffers {
   slug: string;
 }
 
-const JobOffersList = () => {
+const JobOffers = () => {
   const { toast } = useToast();
 
   const [selected, setSelected] = useState<string>('');
@@ -39,6 +39,7 @@ const JobOffersList = () => {
   const { data: session, status } = useSession();
   const userId = session?.user.id;
   const [jobOffers, setJobOffers] = useState<JobOffers[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   const [isOpen, setIsOpen] = useState(false);
 
@@ -113,6 +114,7 @@ const JobOffersList = () => {
   const handleGenerateCoverLetter = async (url: string) => {
     if (!userId) return;
     if (!url) return;
+    setIsLoading(true);
     try {
       const response = await fetch(`/api/jobOffers/generateCoverLetter?url=${url}&userId=${userId}`, {
         method: 'POST',
@@ -129,8 +131,10 @@ const JobOffersList = () => {
         title: 'Cover letter generated successfully',
         duration: 5000,
       });
+      setIsLoading(false);
     } catch (error) {
       console.error('Failed to generate cover letter:', error);
+      setIsLoading(false);
     }
   };
 
@@ -139,106 +143,12 @@ const JobOffersList = () => {
       <div className='flex h-full bg-zinc-100 rounded-3xl gap-4 p-4'>
         <div className='relative flex flex-col bg-white w-1/4 max-2xl:w-full h-full rounded-3xl p-4 '>
           <h3 className='text-lg font-semibold text-zinc-700 border-b-2 pb-2 w-full text-center'>{jobOffers.length} job offers</h3>
-          <ul className='[&_li]:mb-2 mt-4 overflow-y-auto h-[calc(100vh-18rem)] rounded-md'>
-            {jobOffers.map((jobOffer: JobOffers) => (
-              <>
-                <li
-                  key={jobOffer.url}
-                  className={cn(
-                    'max-2xl:hidden gap-3 relative justify-start items-center flex   cursor-pointer hover:bg-zinc-100  rounded-lg px-4 ',
-                    {
-                      'bg-zinc-100': selected === jobOffer.url,
-                    }
-                  )}
-                  onClick={() => jobOffer.url && setSelected(jobOffer.url)}
-                >
-                  <div className='flex justify-start items-center gap-2  py-8 w-10/12'>
-                    <img
-                      src={jobOffer.companyLogo}
-                      alt={jobOffer.company}
-                      className='size-8 rounded-full bg-zinc-500 object-contain'
-                    />
-                    <div className='flex flex-col gap-1'>
-                      <h4 className='text-md font-semibold text-zinc-700 max-2xl:text-sm'>{jobOffer.title}</h4>
-                      <p className='text-sm font-normal max-2xl:text-xs '>{jobOffer.company}</p>
-                      <p className='text-sm text-zinc-500 '>{jobOffer.location}</p>
-                    </div>
-                  </div>
-
-                  <div className='absolute right-2 h-full flex flex-col items-center justify-between pt-2 pb-4'>
-                    <Button
-                      className=' hover:bg-purple-400'
-                      variant={'ghost'}
-                      size={'icon'}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDelete(jobOffer.url);
-                      }}
-                    >
-                      <X />
-                    </Button>
-
-                    {jobOffer.status !== '' && (
-                      <div
-                        className={cn('rounded-full size-3 ', {
-                          'bg-green-400': jobOffer.status === 'interview',
-                          'bg-yellow-400': jobOffer.status === 'applied',
-                          'bg-red-400': jobOffer.status === 'rejected',
-                        })}
-                      ></div>
-                    )}
-                  </div>
-                </li>
-
-                <Link href={`/job-offers/${jobOffer.slug}`}>
-                  <li
-                    key={jobOffer.url}
-                    className={cn('2xl:hidden gap-3 relative justify-start items-center flex   cursor-pointer hover:bg-zinc-100  rounded-lg px-4 ', {
-                      'bg-zinc-100': selected === jobOffer.url,
-                    })}
-                    onClick={() => jobOffer.url && setSelected(jobOffer.url)}
-                  >
-                    <div className='flex justify-start items-center gap-2  py-8 w-10/12'>
-                      <img
-                        src={jobOffer.companyLogo}
-                        alt={jobOffer.company}
-                        className='size-8 rounded-full bg-zinc-500 object-contain'
-                      />
-                      <div className='flex flex-col gap-1'>
-                        <h4 className='text-md font-semibold text-zinc-700 max-2xl:text-sm'>{jobOffer.title}</h4>
-                        <p className='text-sm font-normal max-2xl:text-xs '>{jobOffer.company}</p>
-                        <p className='text-sm text-zinc-500 '>{jobOffer.location}</p>
-                      </div>
-                    </div>
-
-                    <div className='absolute right-2 h-full flex flex-col items-center justify-between pt-2 pb-4'>
-                      <Button
-                        className=' hover:bg-purple-400'
-                        variant={'ghost'}
-                        size={'icon'}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDelete(jobOffer.url);
-                        }}
-                      >
-                        <X />
-                      </Button>
-
-                      {jobOffer.status !== '' && (
-                        <div
-                          className={cn('rounded-full size-3 ', {
-                            'bg-green-400': jobOffer.status === 'interview',
-                            'bg-yellow-400': jobOffer.status === 'applied',
-                            'bg-red-400': jobOffer.status === 'rejected',
-                          })}
-                        ></div>
-                      )}
-                    </div>
-                  </li>
-                </Link>
-              </>
-            ))}
-          </ul>
+          <JobOffersList
+            jobOffers={jobOffers}
+            selected={selected}
+            setSelected={setSelected}
+            handleDelete={handleDelete}
+          />
           <div className='absolute bottom-0 right-0 left-0 items-center justify-center flex flex-col pb-4'>
             <Button
               variant={'outline'}
@@ -264,14 +174,25 @@ const JobOffersList = () => {
               >
                 <div className='flex gap-4 items-center'>
                   <img
-                    src={offer.companyLogo}
+                    src={offer.companyLogo ? offer.companyLogo : '/logo.svg'}
                     alt='Company logo'
-                    className='rounded-full size-12 bg-zinc-500 object-contain'
+                    className={cn('rounded-full size-12 bg-zinc-500 object-contain', { 'bg-white': !offer.companyLogo })}
                   />
 
                   <p className='text-lg font-normal'>{offer.company}</p>
                 </div>
-                <h4 className='text-xl font-bold'>{offer.title}</h4>
+                <div className='flex gap-4 items-center'>
+                  <h4 className='text-xl font-bold'>{offer.title}</h4>
+                  <a
+                    href={offer.url}
+                    target='_blank'
+                    rel='noopener noreferrer'
+                  >
+                    <Button variant={'ghost'}>
+                      <SquareArrowOutUpRight />
+                    </Button>
+                  </a>
+                </div>
                 <p className='text-zinc-500'>{offer.location}</p>
                 <p className='text-zinc-500'>{offer.employmentType}</p>
                 <div className='flex gap-2 bg-zinc-100 rounded-full p-4 my-4'>
@@ -299,14 +220,18 @@ const JobOffersList = () => {
                 </div>
                 <div className='flex w-full p-4 gap-4 bg-zinc-100 rounded-full my-4'>
                   <Button
-                    className={cn('flex-1 rounded-full hover:bg-white', { 'bg-white': selectedTab === 'description' })}
+                    className={cn('flex-1 rounded-full hover:bg-purple-500 hover:text-zinc-50', {
+                      'bg-purple-500 text-zinc-50': selectedTab === 'description',
+                    })}
                     variant={'ghost'}
                     onClick={() => setSelectedTab('description')}
                   >
                     Description
                   </Button>
                   <Button
-                    className={cn('flex-1 rounded-full hover:bg-white', { 'bg-white': selectedTab === 'coverLetter' })}
+                    className={cn('flex-1 rounded-full hover:bg-purple-500 hover:text-zinc-50', {
+                      'bg-purple-500 text-zinc-50': selectedTab === 'coverLetter',
+                    })}
                     variant={'ghost'}
                     onClick={() => setSelectedTab('coverLetter')}
                   >
@@ -324,12 +249,36 @@ const JobOffersList = () => {
                         value={offer.coverLetter}
                         className='flex-1 h-full text-start'
                       ></Textarea>
+                    ) : isLoading ? (
+                      <div
+                        role='status'
+                        className='w-full h-[calc(100vh-7rem)] flex items-center justify-center'
+                      >
+                        <svg
+                          aria-hidden='true'
+                          className='inline size-14 text-gray-200 animate-spin dark:text-gray-600 fill-purple-600'
+                          viewBox='0 0 100 101'
+                          fill='none'
+                          xmlns='http://www.w3.org/2000/svg'
+                        >
+                          <path
+                            d='M100 50.5908C100 78.2051 77.6142 100.591 50 100.591C22.3858 100.591 0 78.2051 0 50.5908C0 22.9766 22.3858 0.59082 50 0.59082C77.6142 0.59082 100 22.9766 100 50.5908ZM9.08144 50.5908C9.08144 73.1895 27.4013 91.5094 50 91.5094C72.5987 91.5094 90.9186 73.1895 90.9186 50.5908C90.9186 27.9921 72.5987 9.67226 50 9.67226C27.4013 9.67226 9.08144 27.9921 9.08144 50.5908Z'
+                            fill='currentColor'
+                          />
+                          <path
+                            d='M93.9676 39.0409C96.393 38.4038 97.8624 35.9116 97.0079 33.5539C95.2932 28.8227 92.871 24.3692 89.8167 20.348C85.8452 15.1192 80.8826 10.7238 75.2124 7.41289C69.5422 4.10194 63.2754 1.94025 56.7698 1.05124C51.7666 0.367541 46.6976 0.446843 41.7345 1.27873C39.2613 1.69328 37.813 4.19778 38.4501 6.62326C39.0873 9.04874 41.5694 10.4717 44.0505 10.1071C47.8511 9.54855 51.7191 9.52689 55.5402 10.0491C60.8642 10.7766 65.9928 12.5457 70.6331 15.2552C75.2735 17.9648 79.3347 21.5619 82.5849 25.841C84.9175 28.9121 86.7997 32.2913 88.1811 35.8758C89.083 38.2158 91.5421 39.6781 93.9676 39.0409Z'
+                            fill='currentFill'
+                          />
+                        </svg>
+                        <span className='sr-only'>Loading...</span>
+                      </div>
                     ) : (
                       <Button
                         onClick={() => handleGenerateCoverLetter(offer.url)}
-                        variant={'outline'}
+                        variant={'ghost'}
+                        className='bg-purple-500 hover:text-zinc-50 hover:bg-purple-400 text-zinc-50'
                       >
-                        Generate cover letter
+                        Generate Cover Letter
                       </Button>
                     )}
                   </div>
@@ -347,4 +296,4 @@ const JobOffersList = () => {
   );
 };
 
-export default JobOffersList;
+export default JobOffers;

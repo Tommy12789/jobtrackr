@@ -2,12 +2,12 @@ import React from 'react';
 
 const HomePage = () => {
   return (
-    <div className='flex flex-col px-8 py-4 space-y-8 h-full'>
+    <div className='flex flex-col px-8 py-4 space-y-8 '>
       <header className='border-b-2 pb-4'>
         <h2 className='text-3xl font-bold'>Home</h2>
       </header>
       <div className='flex h-full w-full items-center justify-center'>
-        <div className='max-w-4xl mx-auto flex flex-col gap-8 bg-zinc-100 p-8 rounded-xl'>
+        <div className='max-w-4xl h-full flex flex-col gap-8 bg-zinc-100 p-8 rounded-xl'>
           <section className='flex flex-col gap-4'>
             <h3 className='text-2xl font-semibold'>Welcome to JobTrackr</h3>
             <p className='text-gray-700 leading-relaxed'>

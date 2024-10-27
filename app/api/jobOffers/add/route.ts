@@ -1,7 +1,8 @@
 import { prisma } from '@/lib/prisma';
-import * as cheerio from 'cheerio';
+import { scrapeWorkdayJobOffer } from '@/lib/scrape/workday';
 import { NextRequest } from 'next/server';
 import { generateUniqueSlug } from '@/lib/slug';
+import { scrapeLinkedInJobOffer } from '@/lib/scrape/linkedin';
 
 export async function POST(request: NextRequest) {
   const url = request.nextUrl.searchParams.get('url');
@@ -31,48 +32,34 @@ export async function POST(request: NextRequest) {
   }
 
   const website = url.split('/')[2];
-  console.log(website);
   const html = await res.text();
-  const $ = cheerio.load(html);
 
-  let company, title, datePosted, employmentType, description, location, companyLogo;
+  let job_offer: {
+    url: string;
+    title: string;
+    company: string;
+    location: string | undefined;
+    description: string;
+    datePosted: Date;
+    companyLogo: string | undefined;
+    employmentType: string;
+    userId: string;
+    slug?: string;
+  };
 
   if (website.includes('workday')) {
-    console.log('workday');
-    const script = $('script[type="application/ld+json"]').html();
-    const data = script ? JSON.parse(script) : null;
-    company = data.hiringOrganization.name;
-    title = data.identifier.name;
-    datePosted = data.datePosted;
-    employmentType = data.employmentType;
-    description = data.description;
-    companyLogo = $('meta[property="og:image"]').attr('content');
-    location = data.jobLocation.address.addressLocality + ', ' + data.jobLocation.address.addressCountry;
+    job_offer = await scrapeWorkdayJobOffer(html);
   } else if (website.includes('linkedin')) {
-    return new Response(html, {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
+    job_offer = await scrapeLinkedInJobOffer(html);
   } else {
     return new Response('Website not supported', { status: 400 });
   }
 
-  const slug = await generateUniqueSlug(title);
+  const slug = await generateUniqueSlug(job_offer['title']);
 
-  const job_offer = {
-    url,
-    title,
-    company,
-    location,
-    description,
-    slug,
-    datePosted: new Date(datePosted),
-    companyLogo,
-    employmentType,
-    userId,
-  };
+  job_offer['slug'] = slug;
+  job_offer['userId'] = userId;
+  job_offer['url'] = url;
 
   const existingJobOffer = await prisma.jobOffer.findUnique({
     where: { url },
@@ -102,15 +89,15 @@ export async function POST(request: NextRequest) {
   } else {
     await prisma.jobOffer.create({
       data: {
-        url,
-        title,
-        company,
-        location,
+        url: job_offer.url,
+        title: job_offer.title,
+        company: job_offer.company,
+        location: job_offer.location || '',
         slug,
-        description,
-        datePosted: new Date(datePosted),
-        companyLogo: companyLogo || 'test',
-        employmentType,
+        description: job_offer.description || '',
+        datePosted: job_offer.datePosted,
+        companyLogo: job_offer.companyLogo || '',
+        employmentType: job_offer.employmentType,
         users: {
           create: { userId },
         },
