@@ -247,6 +247,7 @@ const JobOfferModal: React.FC<JobOfferModalProps> = ({ isOpen, closeModal, setJo
               <Button
                 variant={'outline'}
                 type='submit'
+                className='rounded-full bg-purple-500 text-zinc-50 hover:bg-purple-700 hover:text-zinc-50'
                 key={isLoading ? 'loading' : 'idle'}
               >
                 {isLoading ? (
@@ -318,6 +319,7 @@ const JobOfferModal: React.FC<JobOfferModalProps> = ({ isOpen, closeModal, setJo
               <Button
                 variant={'outline'}
                 type='submit'
+                className='rounded-full bg-purple-500 text-zinc-50 hover:bg-purple-700 hover:text-zinc-50'
                 key={isLoading ? 'loading' : 'idle'}
               >
                 {isLoading ? (

@@ -151,8 +151,8 @@ const JobOffers = () => {
           />
           <div className='absolute bottom-0 right-0 left-0 items-center justify-center flex flex-col pb-4'>
             <Button
-              variant={'outline'}
-              className='rounded-full'
+              variant={'ghost'}
+              className='rounded-full bg-purple-500 text-zinc-50 hover:bg-purple-700 hover:text-zinc-50'
               onClick={() => setIsOpen(true)}
             >
               Add Job Offer
@@ -239,7 +239,7 @@ const JobOffers = () => {
                   </Button>
                 </div>
                 {selectedTab === 'description' ? (
-                  <div className='h-[calc(100vh-38rem)] overflow-y-auto rounded-lg py-4'>
+                  <div className='h-[calc(100vh-40rem)] overflow-y-auto rounded-lg py-4'>
                     <div dangerouslySetInnerHTML={{ __html: offer.description }} />
                   </div>
                 ) : selectedTab === 'coverLetter' ? (
