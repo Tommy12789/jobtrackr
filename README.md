@@ -34,3 +34,27 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+UUID_PATTERN = re.compile(
+    r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}',
+    re.IGNORECASE
+)
+BRACKET_TAG_PATTERN = re.compile(r'\[(?:RESPONSE|CALLED|START|STOP|SUCCESS|FAILURE|WARNING|INFO|EXTERNAL API CALL|EXTERNAL API RESPONSE)\]')
+
+def _normalize_event(event, hint):
+    def clean(text):
+        text = UUID_PATTERN.sub('', text)
+        text = BRACKET_TAG_PATTERN.sub('', text)
+        return text.strip()
+
+    if 'exception' in event:
+        for exc in event['exception'].get('values', []):
+            if exc.get('value'):
+                exc['value'] = clean(exc['value'])
+
+    if 'logentry' in event:
+        msg = event['logentry'].get('message', '')
+        event['logentry']['message'] = clean(msg)
+
+    return event
+
