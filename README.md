@@ -1,23 +1,18 @@
-- name: Check callback config
-  ansible.builtin.debug:
-    msg:
-      stdout_callback_env: "{{ lookup('env', 'ANSIBLE_STDOUT_CALLBACK') }}"
-      callback_plugins_env: "{{ lookup('env', 'ANSIBLE_CALLBACK_PLUGINS') }}"
-      config_file_env: "{{ lookup('env', 'ANSIBLE_CONFIG') }}"
-
-- name: Check ansible.cfg content
+- name: Test plugin import
   ansible.builtin.shell: |
-    echo "=== ANSIBLE_CONFIG ==="
-    echo $ANSIBLE_CONFIG
-    echo "=== Config file used ==="
-    ansible --version | head -5
-    echo "=== ansible.cfg content ==="
-    cat {{ playbook_dir }}/ansible.cfg 2>/dev/null || echo "no ansible.cfg found"
-    echo "=== callback plugins dir ==="
-    ls -la {{ playbook_dir }}/plugins/callback/ 2>/dev/null || echo "no callback dir"
-  register: config_check
+    cd /runner/project
+    python3 -c "
+    import sys
+    sys.path.insert(0, './plugins/callback')
+    try:
+        import protect_data
+        print('OK: plugin loaded')
+    except Exception as e:
+        print(f'ERREUR: {e}')
+    "
   delegate_to: localhost
+  register: import_test
 
-- name: Show config
+- name: Show result
   ansible.builtin.debug:
-    var: config_check.stdout_lines
+    var: import_test.stdout
