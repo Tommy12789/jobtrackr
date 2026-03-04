@@ -1,60 +1,94 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+from __future__ import absolute_import, division, print_function
 
-## Getting Started
+__metaclass__ = type
 
-First, run the development server:
+import collections
+import re
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+from ansible.plugins.callback.default import CallbackModule as CallbackModule_default
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+DOCUMENTATION = """
+    name: protect_data
+    type: stdout
+    short_description: hide sensitive data such as passwords from screen output
+    description:
+        - hide passwords from screen output
+        - https://serverfault.com/questions/754860/how-can-i-reduce-the-verbosity-of-certain-ansible-tasks-to-not-leak-passwords-in/809509#809509
+    extends_documentation_fragment:
+        - default_callback
+    requirements:
+        - set as stdout in configuration
+    options:
+        sensitive_keywords:
+            description:
+                - a list of sensitive keywords to hide separated by a comma
+            type: str
+            env:
+                - name: PROTECT_DATA_SENSITIVE_KEYWORDS
+            ini:
+                - section: callback_protect_data
+                  key: sensitive_keywords
+            default: vault,pwd,pass,cert
+"""
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+EXAMPLES = r"""
+ansible.cfg: >
+    # Enable plugin
+    [defaults]
+    stdout_callback = protect_data
+    callback_plugins = ./plugins/callback
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+    [callback_protect_data]
+    sensitive_keywords = vault,pwd,pass,cert
+"""
 
-## Learn More
 
-To learn more about Next.js, take a look at the following resources:
+class CallbackModule(CallbackModule_default):
+    CALLBACK_VERSION = 2.0
+    CALLBACK_TYPE = "stdout"
+    CALLBACK_NAME = "protect_data"
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+    def __init__(self):
+        super(CallbackModule, self).__init__()
+        self.sensitive_keywords = []
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+    def set_options(self, task_keys=None, var_options=None, direct=None):
+        super(CallbackModule, self).set_options(
+            task_keys=task_keys, var_options=var_options, direct=direct
+        )
+        keywords_str = self.get_option("sensitive_keywords")
+        if keywords_str:
+            self.sensitive_keywords = [
+                kw.strip() for kw in keywords_str.split(",") if kw.strip()
+            ]
 
-## Deploy on Vercel
+    def hide_password(self, result):
+        """Recursively hide sensitive values in result dict."""
+        ret = {}
+        for key, value in result.items():
+            if isinstance(value, (collections.abc.MutableMapping, dict)):
+                ret[key] = self.hide_password(value)
+            else:
+                sensitive_content = False
+                for sensitive_keyword in self.sensitive_keywords:
+                    if sensitive_keyword.lower() in key.lower():
+                        ret[key] = "********"
+                        sensitive_content = True
+                        break
+                if not sensitive_content:
+                    ret[key] = value
+        return ret
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+    def _get_item_label(self, result):
+        """Retrieves the value to be displayed as a label for an item entry from a result object."""
+        result = self.hide_password(result)
+        if result.get("_ansible_no_log", False):
+            item = "(censored due to no_log)"
+        else:
+            item = result.get("_ansible_item_label", result.get("item"))
+        return item
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-
-UUID_PATTERN = re.compile(
-    r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}',
-    re.IGNORECASE
-)
-BRACKET_TAG_PATTERN = re.compile(r'\[(?:RESPONSE|CALLED|START|STOP|SUCCESS|FAILURE|WARNING|INFO|EXTERNAL API CALL|EXTERNAL API RESPONSE)\]')
-
-def _normalize_event(event, hint):
-    def clean(text):
-        text = UUID_PATTERN.sub('', text)
-        text = BRACKET_TAG_PATTERN.sub('', text)
-        return text.strip()
-
-    if 'exception' in event:
-        for exc in event['exception'].get('values', []):
-            if exc.get('value'):
-                exc['value'] = clean(exc['value'])
-
-    if 'logentry' in event:
-        msg = event['logentry'].get('message', '')
-        event['logentry']['message'] = clean(msg)
-
-    return event
-
+    def _dump_results(self, result, indent=None, sort_keys=True, keep_invocation=False):
+        return super(CallbackModule, self)._dump_results(
+            self.hide_password(result), indent, sort_keys, keep_invocation
+        )
