@@ -1,9 +1,9 @@
+# -*- coding: utf-8 -*-
 from __future__ import absolute_import, division, print_function
 
 __metaclass__ = type
 
-import collections
-import re
+import collections.abc
 
 from ansible.plugins.callback.default import CallbackModule as CallbackModule_default
 
@@ -13,11 +13,6 @@ DOCUMENTATION = """
     short_description: hide sensitive data such as passwords from screen output
     description:
         - hide passwords from screen output
-        - https://serverfault.com/questions/754860/how-can-i-reduce-the-verbosity-of-certain-ansible-tasks-to-not-leak-passwords-in/809509#809509
-    extends_documentation_fragment:
-        - default_callback
-    requirements:
-        - set as stdout in configuration
     options:
         sensitive_keywords:
             description:
@@ -29,6 +24,90 @@ DOCUMENTATION = """
                 - section: callback_protect_data
                   key: sensitive_keywords
             default: vault,pwd,pass,cert
+        result_format:
+            description: Define the task result format used in the callback output.
+            type: str
+            default: json
+            env:
+                - name: ANSIBLE_CALLBACK_RESULT_FORMAT
+            ini:
+                - section: defaults
+                  key: callback_result_format
+            choices:
+                - json
+                - yaml
+        pretty_results:
+            description: Configure the result format to be more readable
+            type: bool
+            default: true
+            env:
+                - name: ANSIBLE_CALLBACK_FORMAT_PRETTY
+            ini:
+                - section: defaults
+                  key: callback_format_pretty
+        show_per_host_start:
+            description: Show per host task start callback
+            type: bool
+            default: false
+            env:
+                - name: ANSIBLE_SHOW_PER_HOST_START
+            ini:
+                - section: defaults
+                  key: show_per_host_start
+        display_skipped_hosts:
+            description: Toggle to control displaying skipped task/host results
+            type: bool
+            default: true
+            env:
+                - name: DISPLAY_SKIPPED_HOSTS
+            ini:
+                - section: defaults
+                  key: display_skipped_hosts
+        display_ok_hosts:
+            description: Toggle to control displaying ok task/host results
+            type: bool
+            default: true
+            env:
+                - name: ANSIBLE_DISPLAY_OK_HOSTS
+            ini:
+                - section: defaults
+                  key: display_ok_hosts
+        display_failed_stderr:
+            description: Toggle to control whether failed task output is displayed to stderr
+            type: bool
+            default: false
+            env:
+                - name: ANSIBLE_DISPLAY_FAILED_STDERR
+            ini:
+                - section: defaults
+                  key: display_failed_stderr
+        show_custom_stats:
+            description: Show custom stats at the end of playbook execution
+            type: bool
+            default: false
+            env:
+                - name: ANSIBLE_SHOW_CUSTOM_STATS
+            ini:
+                - section: defaults
+                  key: show_custom_stats
+        show_task_path_on_failure:
+            description: Show task path on failure
+            type: bool
+            default: false
+            env:
+                - name: ANSIBLE_SHOW_TASK_PATH_ON_FAILURE
+            ini:
+                - section: defaults
+                  key: show_task_path_on_failure
+        check_mode_markers:
+            description: Toggle to control displaying markers when running in check mode
+            type: bool
+            default: false
+            env:
+                - name: ANSIBLE_CHECK_MODE_MARKERS
+            ini:
+                - section: defaults
+                  key: check_mode_markers
 """
 
 EXAMPLES = r"""
@@ -80,7 +159,7 @@ class CallbackModule(CallbackModule_default):
         return ret
 
     def _get_item_label(self, result):
-        """Retrieves the value to be displayed as a label for an item entry from a result object."""
+        """Retrieves the value to be displayed as a label for an item entry."""
         result = self.hide_password(result)
         if result.get("_ansible_no_log", False):
             item = "(censored due to no_log)"
