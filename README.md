@@ -3,10 +3,7 @@
 Vérifie que toutes les variables contenant 'password', 'credential' ou 'secret'
 dans leur nom sont préfixées par 'secret_'.
 
-Usage:
-    python check_secret_prefix.py <chemin_du_projet> [--exclude dir1,dir2]
-
-Compatible pre-commit (reçoit une liste de fichiers en arguments) :
+Conçu pour pre-commit qui passe les fichiers staged en arguments :
     python check_secret_prefix.py file1.py file2.py file3.py
 """
 
@@ -18,12 +15,6 @@ from dataclasses import dataclass
 
 SENSITIVE_KEYWORDS = {"password", "credential", "secret"}
 REQUIRED_PREFIX = "secret_"
-
-# Dossiers ignorés par défaut
-DEFAULT_EXCLUDES = {
-    "__pycache__", ".git", ".venv", "venv", "node_modules",
-    ".tox", ".mypy_cache", ".pytest_cache", "env", ".env",
-}
 
 
 @dataclass
@@ -163,58 +154,24 @@ def check_file(filepath: Path) -> list[Violation]:
     return checker.violations
 
 
-def collect_python_files(root: Path, excludes: set[str]) -> list[Path]:
-    """Collecte récursivement tous les fichiers .py en ignorant les dossiers exclus."""
-    files = []
-    for entry in sorted(root.iterdir()):
-        if entry.name in excludes or entry.name.startswith("."):
-            continue
-        if entry.is_dir():
-            files.extend(collect_python_files(entry, excludes))
-        elif entry.is_file() and entry.suffix == ".py":
-            files.append(entry)
-    return files
-
-
 def main():
     parser = argparse.ArgumentParser(
         description="Vérifie le préfixe 'secret_' sur les variables sensibles."
     )
     parser.add_argument(
-        "path",
+        "files",
         type=Path,
         nargs="+",
-        help="Fichier(s) ou dossier(s) à analyser (compatible pre-commit)",
-    )
-    parser.add_argument(
-        "--exclude",
-        type=str,
-        default="",
-        help="Dossiers supplémentaires à exclure (séparés par des virgules)",
+        help="Fichier(s) Python à analyser",
     )
     args = parser.parse_args()
 
-    excludes = DEFAULT_EXCLUDES.copy()
-    if args.exclude:
-        excludes.update(e.strip() for e in args.exclude.split(","))
-
-    files: list[Path] = []
-    for p in args.path:
-        resolved = p.resolve()
-        if not resolved.exists():
-            print(f"⚠ Chemin ignoré (inexistant) : {p}", file=sys.stderr)
-            continue
-        if resolved.is_file():
-            if resolved.suffix == ".py":
-                files.append(resolved)
-        else:
-            files.extend(collect_python_files(resolved, excludes))
-
-    print(f"Analyse de {len(files)} fichier(s) Python\n")
-
     all_violations: list[Violation] = []
-    for f in files:
-        violations = check_file(f)
+    for filepath in args.files:
+        if not filepath.is_file():
+            print(f"⚠ Ignoré (inexistant) : {filepath}", file=sys.stderr)
+            continue
+        violations = check_file(filepath)
         all_violations.extend(violations)
 
     if all_violations:
@@ -224,7 +181,6 @@ def main():
         print()
         sys.exit(1)
     else:
-        print("✓ Aucune violation détectée.")
         sys.exit(0)
 
 
