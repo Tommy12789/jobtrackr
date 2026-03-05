@@ -3,12 +3,10 @@
 Vérifie que toutes les variables contenant 'password', 'credential' ou 'secret'
 dans leur nom sont préfixées par 'secret_'.
 
-Conçu pour pre-commit qui passe les fichiers staged en arguments :
-    python check_secret_prefix.py file1.py file2.py file3.py
+Analyse récursivement tous les .py depuis le répertoire courant.
 """
 
 import ast
-import argparse
 import sys
 from pathlib import Path
 from dataclasses import dataclass
@@ -154,23 +152,28 @@ def check_file(filepath: Path) -> list[Violation]:
     return checker.violations
 
 
+def collect_python_files(root: Path) -> list[Path]:
+    """Collecte récursivement tous les fichiers .py en ignorant les dossiers courants."""
+    excludes = {
+        "__pycache__", ".git", ".venv", "venv", "node_modules",
+        ".tox", ".mypy_cache", ".pytest_cache", "env", ".env",
+    }
+    files = []
+    for entry in sorted(root.iterdir()):
+        if entry.name in excludes or entry.name.startswith("."):
+            continue
+        if entry.is_dir():
+            files.extend(collect_python_files(entry))
+        elif entry.is_file() and entry.suffix == ".py":
+            files.append(entry)
+    return files
+
+
 def main():
-    parser = argparse.ArgumentParser(
-        description="Vérifie le préfixe 'secret_' sur les variables sensibles."
-    )
-    parser.add_argument(
-        "files",
-        type=Path,
-        nargs="+",
-        help="Fichier(s) Python à analyser",
-    )
-    args = parser.parse_args()
+    files = collect_python_files(Path("."))
 
     all_violations: list[Violation] = []
-    for filepath in args.files:
-        if not filepath.is_file():
-            print(f"⚠ Ignoré (inexistant) : {filepath}", file=sys.stderr)
-            continue
+    for filepath in files:
         violations = check_file(filepath)
         all_violations.extend(violations)
 
