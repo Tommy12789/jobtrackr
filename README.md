@@ -4,7 +4,10 @@ Vérifie que toutes les variables contenant 'password', 'credential' ou 'secret'
 dans leur nom sont préfixées par 'secret_'.
 
 Usage:
-    python check_secret_prefix.py <chemin_du_projet> [--fix] [--exclude dir1,dir2]
+    python check_secret_prefix.py <chemin_du_projet> [--exclude dir1,dir2]
+
+Compatible pre-commit (reçoit une liste de fichiers en arguments) :
+    python check_secret_prefix.py file1.py file2.py file3.py
 """
 
 import ast
@@ -177,7 +180,12 @@ def main():
     parser = argparse.ArgumentParser(
         description="Vérifie le préfixe 'secret_' sur les variables sensibles."
     )
-    parser.add_argument("path", type=Path, help="Chemin du projet à analyser")
+    parser.add_argument(
+        "path",
+        type=Path,
+        nargs="+",
+        help="Fichier(s) ou dossier(s) à analyser (compatible pre-commit)",
+    )
     parser.add_argument(
         "--exclude",
         type=str,
@@ -186,21 +194,23 @@ def main():
     )
     args = parser.parse_args()
 
-    root = args.path.resolve()
-    if not root.exists():
-        print(f"Erreur : le chemin '{root}' n'existe pas.", file=sys.stderr)
-        sys.exit(2)
-
     excludes = DEFAULT_EXCLUDES.copy()
     if args.exclude:
         excludes.update(e.strip() for e in args.exclude.split(","))
 
-    if root.is_file():
-        files = [root]
-    else:
-        files = collect_python_files(root, excludes)
+    files: list[Path] = []
+    for p in args.path:
+        resolved = p.resolve()
+        if not resolved.exists():
+            print(f"⚠ Chemin ignoré (inexistant) : {p}", file=sys.stderr)
+            continue
+        if resolved.is_file():
+            if resolved.suffix == ".py":
+                files.append(resolved)
+        else:
+            files.extend(collect_python_files(resolved, excludes))
 
-    print(f"Analyse de {len(files)} fichier(s) Python dans {root}\n")
+    print(f"Analyse de {len(files)} fichier(s) Python\n")
 
     all_violations: list[Violation] = []
     for f in files:
